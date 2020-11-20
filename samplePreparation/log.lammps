@@ -1,0 +1,174 @@
+LAMMPS (29 Oct 2020)
+# Pour 2d granular particles into container
+
+variable	Pi equal 3.141592653
+variable	L equal 20		#half box size
+variable	phi equal 0.85	#surface fraction
+variable	Ntot equal floor(4*${phi}*((2*$L)^2)/${Pi}) #computes Ntot for desired volume fraction and box size.
+variable	Ntot equal floor(4*0.85*((2*$L)^2)/${Pi}) 
+variable	Ntot equal floor(4*0.85*((2*20)^2)/${Pi}) 
+variable	Ntot equal floor(4*0.85*((2*20)^2)/3.141592653) 
+variable	Ntot equal floor(${Ntot}/2)*2	#we want Ntot to be even
+variable	Ntot equal floor(1731/2)*2	
+variable	N equal ${Ntot}/2
+variable	N equal 1730/2
+variable	randSeed1 equal 1234
+variable	randSeed2 equal 5678
+
+dimension	2
+atom_style	sphere 1
+boundary	p p p
+newton		off
+comm_modify	vel yes
+
+region		reg block -$L $L -$L $L -0.5 0.5 units box
+region		reg block -20 $L -$L $L -0.5 0.5 units box
+region		reg block -20 20 -$L $L -0.5 0.5 units box
+region		reg block -20 20 -20 $L -0.5 0.5 units box
+region		reg block -20 20 -20 20 -0.5 0.5 units box
+create_box	2 reg 	#number of atom type: 2
+Created orthogonal box = (-20.000000 -20.000000 -0.5) to (20.000000 20.000000 0.5)
+  2 by 2 by 1 MPI processor grid
+
+neighbor	0.2 bin
+neigh_modify	delay 0
+
+# IMPORTANT NOTE: these values of stiffness (4000) and timestep (0.001)
+# are used in this example file to produce a quick simulation and movie.
+# More appropriate values for realistic simulations would be
+# k = 4.0e5 and dt = 0.0001, as in bench/in.chute (if it were Hertzian).
+
+pair_style      gran/hertz/history 4000.0 NULL 100.0 NULL 0.5 0
+pair_coeff	* *
+
+timestep	0.0001
+
+create_atoms 1 random $N ${randSeed1} NULL
+create_atoms 1 random 865 ${randSeed1} NULL
+create_atoms 1 random 865 1234 NULL
+Created 865 atoms
+  create_atoms CPU = 0.001 seconds
+create_atoms 2 random $N ${randSeed2} NULL
+create_atoms 2 random 865 ${randSeed2} NULL
+create_atoms 2 random 865 5678 NULL
+Created 865 atoms
+  create_atoms CPU = 0.000 seconds
+group atom1 type 1
+865 atoms in group atom1
+group atom2 type 2
+865 atoms in group atom2
+
+variable size1 equal ramp(0.01,0.8)
+variable size2 equal ramp(0.01,1.2)
+fix varSize1 atom1 adapt 10 atom diameter v_size1
+fix varSize2 atom2 adapt 10 atom diameter v_size2
+
+#set type 1 diameter 0.8
+#set type 2 diameter 1.2
+
+fix		1 all nve/sphere
+#fix		xwalls all wall/gran hertz/history 4000.0 NULL 100.0 NULL 0 1 #		xplane 0 100
+#fix		ywalls all wall/gran hertz/history 4000.0 NULL 100.0 NULL 0 1 #		yplane 0 NULL
+
+compute		1 all erotate/sphere
+thermo_style	custom step atoms ke c_1 vol
+thermo		1000
+compute_modify	thermo_temp dynamic/dof yes
+
+dump		save all custom 250 out.dump id type radius x y z
+
+run		25000
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 1.2
+  ghost atom cutoff = 1.2
+  binsize = 0.6, bins = 67 67 2
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair gran/hertz/history, perpetual
+      attributes: half, newton off, size, history
+      pair build: half/size/bin/newtoff
+      stencil: half/bin/2d/newtoff
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 11.24 | 11.24 | 11.24 Mbytes
+Step Atoms KinEng c_1 Volume 
+       0     1730            0            0         1600 
+    1000     1730 4.3503314e-08 1.5211396e-35         1600 
+    2000     1730 7.5112585e-07 1.1503555e-08         1600 
+    3000     1730 5.4842932e-06 1.6389579e-07         1600 
+    4000     1730 2.3905477e-05 8.1714084e-07         1600 
+    5000     1730 6.4836367e-05 3.3053889e-06         1600 
+    6000     1730 0.00016479303 1.0182568e-05         1600 
+    7000     1730 0.0003721066 2.5160982e-05         1600 
+    8000     1730 0.00073569215 6.4303191e-05         1600 
+    9000     1730 0.0014491098 0.00013214968         1600 
+   10000     1730 0.0027221345 0.00025534618         1600 
+   11000     1730 0.0045322754 0.00047032158         1600 
+   12000     1730  0.007336057 0.0008821782         1600 
+   13000     1730  0.011506201 0.0014304551         1600 
+   14000     1730  0.017262624 0.0022692172         1600 
+   15000     1730  0.025163672 0.0037510521         1600 
+   16000     1730  0.037080912 0.0059510949         1600 
+   17000     1730  0.055834974 0.0086218596         1600 
+   18000     1730  0.077512719  0.013668587         1600 
+   19000     1730   0.11575431  0.020480709         1600 
+   20000     1730   0.16377172   0.03056353         1600 
+   21000     1730   0.22286847  0.043515596         1600 
+   22000     1730   0.30894966  0.062715894         1600 
+   23000     1730   0.40295826  0.087840926         1600 
+   24000     1730   0.54949456   0.12204082         1600 
+   25000     1730   0.68241034   0.16843798         1600 
+Loop time of 1.675 on 4 procs for 25000 steps with 1730 atoms
+
+Performance: 128954.893 tau/day, 14925.335 timesteps/s
+93.1% CPU use with 4 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.33452    | 0.40513    | 0.44909    |   6.7 | 24.19
+Neigh   | 0.0065737  | 0.0071844  | 0.00774    |   0.5 |  0.43
+Comm    | 0.29985    | 0.32934    | 0.35357    |   3.5 | 19.66
+Output  | 0.074808   | 0.080335   | 0.086312   |   1.5 |  4.80
+Modify  | 0.41809    | 0.45167    | 0.46647    |   2.9 | 26.97
+Other   |            | 0.4013     |            |       | 23.96
+
+Nlocal:        432.500 ave         442 max         419 min
+Histogram: 1 0 0 0 0 1 0 1 0 1
+Nghost:        111.500 ave         113 max         109 min
+Histogram: 1 0 0 0 0 1 0 0 0 2
+Neighs:        1137.50 ave        1201 max        1045 min
+Histogram: 1 0 0 0 0 0 2 0 0 1
+
+Total # of neighbors = 4550
+Ave neighs/atom = 2.6300578
+Neighbor list builds = 59
+Dangerous builds = 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Total wall time: 0:00:01
